@@ -1,0 +1,7 @@
+#!/bin/bash
+
+#make glucose-3.0
+cd glucose-3.0/simp
+make clean
+make rs 2>&1
+cp glucose_static ../../bin/
