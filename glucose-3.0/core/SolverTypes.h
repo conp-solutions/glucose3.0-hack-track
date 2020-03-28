@@ -55,7 +55,7 @@ struct Lit {
     int     x;
 
     // Use this as a constructor:
-    friend Lit mkLit(Var var, bool sign = false);
+    friend Lit mkLit(Var var, bool sign);
 
     bool operator == (Lit p) const { return x == p.x; }
     bool operator != (Lit p) const { return x != p.x; }
@@ -63,7 +63,7 @@ struct Lit {
 };
 
 
-inline  Lit  mkLit     (Var var, bool sign) { Lit p; p.x = var + var + (int)sign; return p; }
+inline  Lit  mkLit     (Var var, bool sign = false) { Lit p; p.x = var + var + (int)sign; return p; }
 inline  Lit  operator ~(Lit p)              { Lit q; q.x = p.x ^ 1; return q; }
 inline  Lit  operator ^(Lit p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
 inline  bool sign      (Lit p)              { return p.x & 1; }
@@ -134,7 +134,7 @@ class Clause {
       unsigned learnt    : 1;
       unsigned has_extra : 1;
       unsigned reloced   : 1;
-      unsigned lbd       : 26;
+      unsigned lbd       : 25,S:1;
       unsigned canbedel  : 1;
       unsigned size      : 32;
       unsigned szWithoutSelectors : 32;
@@ -154,6 +154,7 @@ class Clause {
         header.size      = ps.size();
 	header.lbd = 0;
 	header.canbedel = 1;
+    header.S=0;
         for (int i = 0; i < ps.size(); i++) 
             data[i].lit = ps[i];
 	
@@ -202,6 +203,8 @@ public:
     unsigned int        lbd    () const        { return header.lbd; }
     void setCanBeDel(bool b) {header.canbedel = b;}
     bool canBeDel() {return header.canbedel;}
+    int S(){return header.S;}
+    void S(int s){header.S=s;}
     void setSizeWithoutSelectors   (unsigned int n)              {header.szWithoutSelectors = n; }
     unsigned int        sizeWithoutSelectors   () const        { return header.szWithoutSelectors; }
 
@@ -270,6 +273,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
 	  to[cr].setLBD(c.lbd());
 	  to[cr].setSizeWithoutSelectors(c.sizeWithoutSelectors());
 	  to[cr].setCanBeDel(c.canBeDel());
+      to[cr].S(c.S());
 	}
         else if (to[cr].has_extra()) to[cr].calcAbstraction();
     }
