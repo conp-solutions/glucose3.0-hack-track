@@ -314,9 +314,8 @@ void Solver::removeClause(CRef cr) {
 
   if (certifiedUNSAT) {
     fprintf(certifiedOutput, "d ");
-    for (int i = 0; i < c.size(); i++)
-      fprintf(certifiedOutput, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
-    fprintf(certifiedOutput, "0\n");
+#define D do {for (int i = 0; i < c.size(); i++) {fprintf(certifiedOutput, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));}fprintf(certifiedOutput, "0\n"); }while(0)
+    D;
   }
 
   detachClause(cr);
@@ -1367,91 +1366,79 @@ void Solver::relocAll(ClauseAllocator& to)
 {
    if(solves && X++ > Y) {
 
-     L=60; // clauses with lbd higher than 60 are not considered (and rather large anyways)
-     Y = Y * 2;
+     Y *= 2;
      int Z=0,i,j,k,l,p;
+#define E size()
+#define Q toInt
+#define L learnts
+#define J learnt()
+#define H Clause&
 
-     printf("c simplify at try %d, next limit: %d\n", X, Y);
-     // fill occurrence data structure
      O.resize(2*nVars());
+     CRef R;
 
       for(i=0; i < 2; ++i) {
-        vec<CRef> &V = i==0 ? clauses : learnts; // add all clauses to occurrence structure
-        for(j=0; j < V.size(); ++j) {
-          CRef R = V[j];
-          Clause &c = ca[R];
-          if(c.mark()) continue;
-          for(k=0;k<c.size();++k) O[toInt(c[k])].push_back(R);
+        vec<CRef> &V = i==0 ? clauses : L;
+        for(j=0; j < V.E; ++j) {
+          R = V[j];
+          H c = ca[R];
+
+          if(!c.mark()) for(k=0;k<c.E;++k) O[Q(c[k])].push_back(R);
+
         }
       }
 
       M.growTo(2*nVars());
       T=0;
-      printf("c run subsimp for %d learnt clauess\n", learnts.size());
-      for(i = 0; i < learnts.size(); ++ i) {
+      for(i = 0; i < L.E; ++ i) {
         T++;
-        CRef s=learnts[i];
-        Clause &c=ca[s];
-        if(c.mark() || c.S() || c.lbd() > 12) continue; // run this check for each clause exactly once!
-        Lit m=c[0];
-
-        // get least frequent literal from clause, and mark all lits of clause in array
-        for(j=0; j<c.size(); ++j){
-          k=toInt(c[j]);
-          M[k]=T; // make array for current literal
-          m=O[k].size() < O[toInt(m)].size() ? c[j] : m; // get least frequent literal
+        H e=ca[L[i]];
+        if(e.mark() || e.S() || e.lbd() > 12) continue;
+        Lit m=e[0];
+        for(j=0; j<e.E; ++j){
+          k=Q(e[j]);
+          M[k]=T;
+          m=O[k].E < O[Q(m)].E ? e[j] : m;
         }
-        // printf ("c for clause %d, mark %d lits\n", s, c.size());
 
-        std::vector<CRef> &V = O[toInt(m)];
-        for(j=0; j<V.size(); ++j) {
-          CRef r=V[j];
-          if(r==s) continue; // do not subsume the same clause
-          Clause &d = ca[r]; // get the actual clause
-          if(d.size() < c.size() || d.mark() || (d.learnt() && d.lbd() > L)) continue; // smaller clauses cannot be (self-)subsumed
-
-          l=-1;p=0;
-          for(k=0; k < d.size(); ++k) {
-            // the current literal is not present in clause 'c', so 'd' is not subsumed
-            if(M[toInt(d[k])]==T) p++;
-            else {
-              // are there 2 literals that do not match, or we'd remove a watched literal, then do not consider self subsuming resolution
-              if(l>=0 || k < 2) {
-                l=d.size();
-              } else if (M[toInt(~d[k])]==T) {
-                l=k;
-                p++; // count this literal as matching
+        A<CRef> &V = O[Q(m)];
+        for(j=0; j<V.E; ++j) {
+          R=V[j];
+          if(R!=L[i])
+          {
+            H c = ca[R];
+            if(c.E >= e.E && !c.mark() && (!c.J || c.lbd() < 61))
+            {
+              l=-1;p=0;
+              for(k=0; k < c.E; ++k) {
+                if(M[Q(c[k])]==T) p++;
+                else {
+                  if(l>=0 || k < 2) {
+                    l=c.E;
+                  } else if (M[Q(~c[k])]==T) {
+                    l=k;
+                    p++;
+                  }
+                }
               }
-              // could break, if d.size() - k < c.size() - p (might be more expensive than just running through, even after reformulating statement)
-            }
-          }
-          // subsume or self-subsume (we matched all c literals, and did not hit a break statement)
-          // printf ("c for clause %d, hit %d out o %d lits\n", r, p, c.size());
-          if(p==c.size()) { // && k==d.size() ) // in case there is a break statment in the above loop, we need to make sure we processed all literals in d
-            if(l<0 && (d.learnt() || !c.learnt())) {
-              // printf("c remove clause with reference %d\n", r);
-              removeClause(r); // subsume, if learnt status matches, hence drop
-              Z++;
-            } else if(l>=0 && l < d.size() ) {
-              // drop the one literal, whose complement is in clause 'c'
-              // printf("c remove literal at position %d from clause with reference %d\n", l, r);
-              d[l] = d.last(); d.pop();
-
-              // drop proof file
-              if(certifiedUNSAT) {
-                for (k = 0; k < d.size(); k++)
-                  fprintf(certifiedOutput, "%i ", (var(d[k]) + 1) * (-2 * sign(d[k]) + 1));
-                fprintf(certifiedOutput, "0\n");
+              if(p==e.E) {
+                if(l<0 && (c.J + !e.J)) {
+                  removeClause(R);
+                  Z++;
+                } else if(l>=0 && l < c.E ) {
+                  c[l] = c.last(); c.pop();
+                  if(certifiedUNSAT) D;
+                  Z++;
+                }
               }
-              Z++;
             }
           }
         }
-        c.S(1); // memorize that we will not repeat the analysis with this clause
+        e.S(1);
       }
 
-      if(!Z) Y+=2; // in case we did not modify anything, skip a few more relocs before trying again
-      for(i=0;i<O.size();++i) O[i].clear(); // do not free, just drop elements
+      if(!Z) Y+=2;
+      for(i=0;i<O.E;++i) O[i].clear();
     }
 
     // All watchers:

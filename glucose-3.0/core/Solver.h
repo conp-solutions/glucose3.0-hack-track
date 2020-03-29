@@ -38,6 +38,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Constants.h"
 
 #include <vector>
+#define A std::vector
 
 namespace Glucose {
 
@@ -231,7 +232,7 @@ protected:
     double              progress_estimate;// Set by 'search()'.
     bool                remove_satisfied; // Indicates whether possibly inefficient linear scan for satisfied clauses should be performed in 'simplify'.
     vec<unsigned int> permDiff,M;      // permDiff[var] contains the current conflict number... Used to count the number of  LBD
-    std::vector<std::vector<CRef> > O;
+    A<A<CRef> > O;
     
 #ifdef UPDATEVARACTIVITY
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
@@ -254,7 +255,7 @@ protected:
     vec<Lit>            analyze_stack;
     vec<Lit>            analyze_toclear;
     vec<Lit>            add_tmp;
-    unsigned int  MYFLAG,T,X,Y,L;
+    unsigned int  MYFLAG,T,X,Y;
 
 
     double              max_learnts;

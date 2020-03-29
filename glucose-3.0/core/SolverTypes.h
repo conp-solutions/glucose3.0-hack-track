@@ -55,7 +55,7 @@ struct Lit {
     int     x;
 
     // Use this as a constructor:
-    friend Lit mkLit(Var var, bool sign);
+    friend Lit mkLit(Var var, bool sign = false);
 
     bool operator == (Lit p) const { return x == p.x; }
     bool operator != (Lit p) const { return x != p.x; }
@@ -63,7 +63,7 @@ struct Lit {
 };
 
 
-inline  Lit  mkLit     (Var var, bool sign = false) { Lit p; p.x = var + var + (int)sign; return p; }
+inline  Lit  mkLit     (Var var, bool sign) { Lit p; p.x = var + var + (int)sign; return p; }
 inline  Lit  operator ~(Lit p)              { Lit q; q.x = p.x ^ 1; return q; }
 inline  Lit  operator ^(Lit p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
 inline  bool sign      (Lit p)              { return p.x & 1; }
@@ -128,6 +128,8 @@ inline lbool toLbool(int   v) { return lbool((uint8_t)v);  }
 class Clause;
 typedef RegionAllocator<uint32_t>::Ref CRef;
 
+#define P header.S
+
 class Clause {
     struct {
       unsigned mark      : 2;
@@ -154,7 +156,7 @@ class Clause {
         header.size      = ps.size();
 	header.lbd = 0;
 	header.canbedel = 1;
-    header.S=0;
+    P=0;
         for (int i = 0; i < ps.size(); i++) 
             data[i].lit = ps[i];
 	
@@ -203,8 +205,8 @@ public:
     unsigned int        lbd    () const        { return header.lbd; }
     void setCanBeDel(bool b) {header.canbedel = b;}
     bool canBeDel() {return header.canbedel;}
-    int S(){return header.S;}
-    void S(int s){header.S=s;}
+    int S(){return P;}
+    void S(int s){P=s;}
     void setSizeWithoutSelectors   (unsigned int n)              {header.szWithoutSelectors = n; }
     unsigned int        sizeWithoutSelectors   () const        { return header.szWithoutSelectors; }
 
