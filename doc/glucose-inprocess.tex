@@ -1,0 +1,83 @@
+\documentclass[conference]{IEEEtran}
+% packages
+\usepackage{xspace}
+\usepackage{hyperref}
+\usepackage{todonotes}
+\usepackage{tikz}
+\usepackage[utf8]{inputenc}
+
+\def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
+\def\ea{\,et\,al.\ }
+
+\begin{document}
+	
+% paper title
+\title{Glucose 3.0 -- With Inprocessing}
+
+% author names and affiliations
+% use a multiple column layout for up to three different
+% affiliations
+\author{
+\IEEEauthorblockN{Norbert Manthey}
+\IEEEauthorblockA{nmanthey@conp-solutions.com\\Dresden, Germany}
+}
+
+\maketitle
+
+\def\coprocessor{\textsc{Coprocessor}\xspace}
+\def\glucose{\textsc{Glucose~3.0}\xspace}
+\def\minisat{\textsc{Minisat~2.2}\xspace}
+\def\riss{\textsc{Riss}\xspace}
+\def\mergesat{\textsc{MergeSAT}\xspace}
+
+% the abstract is optional
+\begin{abstract}
+The presented \glucose hack adds formula simplification during search, namely subsumption and self-subsuming resolution.
+Instead of full integration, this hack initiates required data structures.
+As learned clauses cannot be super-sets of existing clauses, each clause is considered for simplification exactly once.
+\end{abstract}
+
+\section{Introduction}
+
+Since the 2009 SAT competition, some SAT solvers~\cite{precosat} have run formula simplification as part of their search.
+More recently, learned clause minimization has been extended to consider binary clauses~\cite{glucose}, as well as vivification for learned clauses has been driving success~\cite{riss5,lcm-ijcai2017}.
+With vivification, learned clauses are reduced during search, based on other clauses.
+While general conflict driven clause learning does not learn the same clause twice -- except a learned clause has been removed -- vivification allows to introduce duplicates.
+The winning solver~\cite{MapleLCMDistChronoBTDL} of 2019 countered this effect by blocking the introduction of duplicate clauses via a hash-map.
+
+With this hack, we take this approach a step further: instead of checking for duplicates, we check for subsumption as well as self-subsuming resolution.
+The subsumption check is more powerful than the duplicate check.
+Self-subsuming resolution allows to shrink learned clauses even further.
+
+\section{Integrated Techniques and Fixes}
+
+Analysis on simplifications in~\cite{M2014} showed that plain subsumption and self-subsuming resolution are as powerful as bounded variable elimination~\cite{EenB:2005}.
+Therefore, this implementation focusses on implementing these two techniques.
+A subsumption check is implemented in a linear fashion using a linear hash table for fast accesses.
+The self-subsuming resolution check is implemented in the same loop, essentially checking whether all except one literals of the simplifying clause match, and the remaining literal matches as the complement.
+Each learned clause is considered as a simplification candidate at most once.
+
+Simplification is scheduled after the clause database has been cleaned significantly, i.e. after at least $30\,\%$ of the clauses have been dropped.
+Furthermore, simplifications are scheduled with an exponential back-off, i.e. after 1, 2, 4, 8, \dots attempts.
+Additionally, the current limit is increased by 2, in case no simplification was possible.
+The schedule is implemented in this way, because it is simple, and because the operation itself comes with an upfront cost.
+There might be more effective ways to implement this simplification, but given the space limitations, the proposed one was found to perform better than the unmodified solver.
+
+\subsection{Preliminary Testing}
+
+The modification has been tested on the evaluation benchmark for tuning solvers~\cite{DBLP:conf/lion/HoosKSS13} with a timeout of 900 seconds.
+190 instead of 185 formulas could be solved within the timeout.
+
+\section{Availability}
+
+The source of the solver is publicly available under the MIT license at \url{https://github.com/conp-solutions/glucose3.0-hack-track}.
+The version in the branch ``reloc-subsume'' has been submitted to the 2020 competition.
+While the diff to the original system is below 1000 characters, as required, there is a more readable version available as well, in the same branch.
+There is an explicit commit (``443ff88: glucose-hack-track: get diff below 1000'') that reduces the diff.
+Mechanics to do that are to reuse variable, define a macro for printing clauses to drup proofs, and defining constants for common parts of the code, like ``size()'' statements.
+This commit highlights that the requirement to stay below a predefined distance in characters as a metric has flaws, and other measures, i.e. number of different program statements might be better suited.\footnote{This could be based for example on the ELOC count CPROVER tools~\cite{cbmc} can generate.}
+
+\bibliographystyle{IEEEtranS}
+\bibliography{local}
+
+\end{document}
